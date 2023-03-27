@@ -1,0 +1,30 @@
+
+- (done) configure gymnasium and make sure we can run the Cheetah env
+- (done) configure MLP with rescaling and output norm.
+- (done) figure out how to store video from the env.
+- use Async Vector Env to sample from multiple copies of the environment in parallel
+- change model to be able to sample from a distribution
+- implement naive reinforce without replay buffer.
+- refactor reinforce into its own class
+- train a reinforce agent and store checkpoints.
+- use CEM to optimize for the gradient cosine distance with the policy gradient from the initial, random policy
+
+todo in order:
+priority: getting reinforce to actually work on cheetah
+
+- implement the async environment to collect faster
+- sample a bunch of random actions to compute the observations means and variances
+- implement a replay buffer
+- implement importance sampling to use much larger batch sizes, and then ignore old policies which deviate too much in log likelihood
+- have the network output a beta distribution since the action space is between -1 and 1
+- send everything to gpu to compute things much faster
+- train for many steps between environment interactions
+- save videos once in a while in order to actually see what the policy is doing in training.
+- correctly treat trajectories which are terminated early
+
+1. (done) sample_trajectories update
+2. (done) agent sampling with beta distribution
+3. replay_buffer variance and stats computation, buffer importance ratios tracking
+4. (done) agent training loop between environment interactions
+5. main env interact -> replay_buffer -> agent training loop in main
+6. saving models and videos
