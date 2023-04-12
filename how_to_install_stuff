@@ -1,4 +1,7 @@
 
+Instructions for how to run everything locally, without needing Colab or messing around with Docker containers
+=====================================================
+
 You need to install Gymnasium with
 
 pip install gymnasium
@@ -8,13 +11,13 @@ Then you need to install mujoco by downloading the following file:
 https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz
 and then extracting it in ~/.mujoco/mujoco210
 
-add the following lines at the end of ~/.bashrc and restart your terminal:
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/razvan/.mujoco/mujoco210/bin
+add the following lines at the end of ~/.bashrc and restart your terminal (replace USER with your username):
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/USER/.mujoco/mujoco210/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
 
 .. then install mujoco-py:
 
-copy https://github.com/openai/mujoco-py/ and make from source by running the following commands:
+download https://github.com/openai/mujoco-py/ and make from source by running the following commands:
 sudo apt install libosmesa6-dev libgl1-mesa-glx libglfw3
 then cd into the extracted directory of mujoco-py and run:
 pip install -e .

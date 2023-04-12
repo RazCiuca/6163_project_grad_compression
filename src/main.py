@@ -3,16 +3,9 @@ sample script to train reinforce with a MLP policy
 
 """
 
-
-import torch as t
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from MLP import *
-import gymnasium as gym
 from utils import *
-from replay_buffer import *
-from agent import RLagent
+from ReplayBuffer import *
+from src.agents.agent import RLagent
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':

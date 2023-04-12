@@ -1,0 +1,152 @@
+
+=====================================================
+Main Environments:
+=====================================================
+documentation for gymnasium: https://gymnasium.farama.org/environments/mujoco/
+
+- I think we should mostly test on Ant, Half-Cheetah, Humanoid, Reacher
+- scrap all the Robocup stuff, not enough time, and there's more than enough to do as is
+
+
+=====================================================
+Main useful classes:
+=====================================================
+
+MLP:
+    - class defining a basic MLP with Relu transitions, inherits from nn.Module
+    - (as a curiosity, I'll also implement a second model that is just polynomial regression. I have a sneaking
+       suspicion that on these image-less control tasks the MLP architecture is making things needlessly unstable,
+       and that if we just parametrised our actions by a polynomial function fo the state, we would do much better)
+
+ReplayBuffer
+    - class that stores trajectories of environment interaction and actions
+    - needs to also store the probability that the actor assigned to the actions in the trajectories.
+      This is needed to compute the importance sampling ratios for off-policy learning
+    - provides methods for sampling trajectories for learning, and removing those trajectories with low
+      importance-sampling ratios
+
+ReplayBufferGAR (GAR = Gradient-Action-Relabelling)
+    - subclasses ReplayBuffer
+    - also implements gradient-action-relabelling, where the actions of old states are relabelled with the
+      actions which leads to the single-step gradient that has the highest similarity with the full gradient
+
+PolicyGradientAgent
+    - an agent that learns according to the basic REINFORCE algorithm.
+    - handles sampling actions from probability distributions defined by the MLP
+    - uses a baseline for the total return in order to minimize gradient variance
+        - (i.e. we compute the average return over all trajectories of the current agent, and each trajectory
+           will contribute a gradient (traj_return - average_traj_return) * sum_of_gradient_of_log_prob )
+    - implements importance-sampling
+
+StudentTeacherAgent
+    - implements the Student-Teacher policy gradient algorithm
+    - keep track of the MLP parameters of the student, and also of an extra last layer of parameters for the teacher
+    - implements the extra objective corresponding to the entropy difference between the student and teacher distributions
+
+Trainer
+    - provides basic training loop for an agent in an environment
+    - shouldn't contain lots of logic
+
+TrajCompressor
+    - class implementing Algorithm 1: Finding compressed-gradient action sequences
+    - Use the cross-entropy method, and possibly add a gradient estimation by using linear regression?
+    - here it's crucial to use the "Async Vector Env" wrappers that Gymnasium provides, because the bottleneck is
+      gonna be environment interactions, not
+    - have the option to either minimize the L2 norm, or the cosine similarity
+
+AgentKnowledgeTransfer
+    - class implementing the knowledge transfer between two networks, given a history of parameter checkpoints from the trained model
+    - will make heavy use of the TrajCompressor class
+
+=====================================================
+experiment scripts:
+=====================================================
+
+train_vanilla_policyGradAgent.py:
+    - a script that trains a vanilla REINFORCE model on all environments
+    - CRUCIALLY, we store all the intermediate weight checkpoints, and store all gradients
+    - lots of the experiments we do later will require that we have access to the history of a trained model.
+    - train multiple different structures of MLP, and multiple different seeds for each of these structures to get
+      decent statistical power.
+
+grad_compress_exp:
+    These are experiments related to the basic idea of compressing the gradients into trajectories
+
+    exp1_compression_accuracy.py:
+        - for every environment, for every checkpoint that we've saved from the vanilla REINFORCE agent,
+          we run the Trajectory Compression with a variety of trajectory lengths, keeping track of the
+          similarity between the resulting gradient and our target gradient. Also logging the return of those compressed trajectories
+        - at every checkpoint that we want to save, do a gradient computation with a truly insane number of environment interactions,
+          in order to obtain a really, really good estimate of the true policy gradient
+
+    exp1_plotting.py:
+        - script that makes matplotlib plots with the data from exp1
+        - we should be able to make plots of the similarity as a function of the number of steps that we allow CEM to optimize
+        - Also make plots of how the similarity varies with training stage, where the number of optimized trajectories is made constant
+        - plots of the returns of those compressed trajectories
+        - plots of the similarity as a function of CEM iteration. How many environment interactiond do we need to find these compressed trajs?
+        - storing videos of trajectories
+
+    exp2_arbitrary_weight_reconstruction.py:
+        - is the policy gradient especially easy to reconstruct from compressed gradient trajectories, or can we do
+          this for any weight change?
+        - for every environment, for every checkpoint, sample a bunch of random weight directions, then use Trajectory Compression
+          to try to make the gradient match those weight directions, and see how close we get.
+
+    exp2_plotting.py:
+        - plot mainly how close we get to reconstructing the various random weight directions, and compare to how close
+          we could reconstruct the policy gradient
+        - saving some videos of the result
+
+    exp3_trajectory_generalization.py:
+        - with the data we have from experiment 1 (i.e. the compressed trajectories for all envs, checkpoints and model architectures),
+          we compute how much compressed trajectories learned with one set of weights at a particular stage of training
+          generalize to other set of weights.
+        - First we want to know if they generalize within the same model at different training stages.
+        - Then we want to know if they generalize within the same architecture but with different initialization
+        - Then for different architectures.
+
+    exp3_plotting:
+        - heat map of the average gradient similarity as a function of the checkpoint used to make the traj, and the checkpoint
+          at which it's evaluated.
+        - plot the gradient similarity as a function checkpoint with trajectories coming from a model with the same arch, but
+          different weight init.
+        - same as previous, but with different architecture.
+
+teacher_student_exp:
+    These are experiments relating to Algorithm 2: Teacher-Student Policy Gradients
+
+    exp4_teacher_student.py
+        - train the teacher student setup with all environments, with multiple seeds, to get performance numbers
+        - plot the average return, and the average gradient similarity over training. Compare these metrics with their
+          valus for REINFORCE
+    exp5_entropy_reg_ablation.py
+        - same as 4, but remove the entropy regularization term
+    exp6_last_layer_teacher_ablation.py
+        - same as 4, but remove the teacher being only the last layer, have the teacher be a whole other network
+    exp7_variance_reduction_estimation.py
+        - we want to estimate if the teacher student setup actually produce gradient with a lower variance
+          than REINFORCE
+        - at various checkpoints throughout training, we use an enormous batch size to compute the true policy gradient,
+          then see how closely the gradient the Teacher-Student setup generates matches this true policy gradient.
+          we've already done this in exp1 for the REINFORCE algorithm, so we can compare.
+
+
+gradient_action_relabel_exp:
+
+
+knowledge_transfer_exp:
+
+
+=====================================================
+technical miscellaneous points:
+=====================================================
+- I wrote a very easy video logger in utils, no need to mess around with needlessly complicated loggers
+- We should use Async Vector Env to sample from multiple copies of the environment in parallel.
+    This is because the bottleneck for performance will be environment sampling, not really the training
+- Since most environments have bounded action spaces, parametrising the output distribution
+    by a gaussian is not really natural, if the std is too large, clamping the actions would essentially make us
+    always take extreme actions. So a better way is to parametrise the distribution as a beta distribution, and
+    have the network output the alpha and beta parameters at each step. The Agent classes should take care of this
+
+

@@ -1,10 +1,4 @@
-
-import torch as t
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from MLP import *
-import gymnasium as gym
+from src.MLP import *
 import imageio
 
 def get_video_from_env(env, actions, save_path=None):

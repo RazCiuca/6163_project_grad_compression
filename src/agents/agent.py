@@ -1,10 +1,5 @@
-
-import torch as t
 from torch.distributions import beta
-import torch.nn as nn
-from utils import *
-from replay_buffer import *
-from MLP import *
+from src.MLP import *
 
 class RLagent:
     """
