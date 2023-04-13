@@ -1,4 +1,15 @@
 
+priorities:
+First: get REINFORCE to work
+
+- PolicyGradientAgent.py
+- ReplayBuffer.py
+- Trainer.py
+- main.py
+
+Second: TrajCompressor.py
+Then: All experiments in order
+
 =====================================================
 Main Environments:
 =====================================================
