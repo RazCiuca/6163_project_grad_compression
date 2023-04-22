@@ -1,4 +1,46 @@
 
+Here's the training loop with policy gradients:
+
+- define a model which parametrises our policy
+    -> here this is an MLP which outputs a beta distribution for each action dimension
+- use that model to collect samples from the environment
+    -> i.e. call sample_trajectories from utils, possibly with a vectorized environment to be more efficient
+- add those samples to the replay buffer, tagging them with the total probability assigned to them with the current model
+    -> and tag them with the total return
+    -> the replay buffer needs to eliminate samples with low importance sampling ratios
+    -> it needs to keep around the running average of the inputs, to normalize them
+        -> actually the network should have those parameters within itself as a layer, to avoid modifying all data in the replaybuffer
+- enter a training loop where we sample from the entire replay buffer and train our network using off-policy gradient
+    -> sample a batch of trajectories from replay buffer
+    -> define the loss = -sum_i G_i log(total prob of traj_i)
+    -> differentiate the loss to get gradients
+
+- PolicyGradientAgent.py
+    - stores the MLP
+    - stores the optimizer
+    - stores a normalization routine with stored mean and variance
+    - stores the loss computation and sampling from Beta distribution routines
+
+- Trainer.py
+    - stores the ReplayBuffer
+    - stores the Agent instance
+    - does the env_interact -> SGD_loop_through_data -> env_interact macro loop
+
+- ReplayBuffer.py
+    -
+
+- train_vanilla_policyGradAgent.py
+    - creates the environments we want to train on
+    - loops through the agents we want to train and trains them, storing what we want
+
+- TrajCompressor.py
+
+- first task: code the policy gradient agent, and run it on a bunch of environments
+
+
+
+
+
 - (done) configure gymnasium and make sure we can run the Cheetah env
 - (done) configure MLP with rescaling and output norm.
 - (done) figure out how to store video from the env.

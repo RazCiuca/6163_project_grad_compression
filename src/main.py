@@ -3,6 +3,7 @@ sample script to train reinforce with a MLP policy
 
 """
 
+import gymnasium as gym
 from utils import *
 from ReplayBuffer import *
 from src.agents.agent import RLagent

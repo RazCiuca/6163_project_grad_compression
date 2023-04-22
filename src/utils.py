@@ -1,4 +1,4 @@
-from src.MLP import *
+from MLP import *
 import imageio
 
 def get_video_from_env(env, actions, save_path=None):
@@ -22,9 +22,10 @@ def get_video_from_env(env, actions, save_path=None):
 
     return video
 
-def sample_trajectories(agent, env, n_traj=1000, max_steps=1000):
+def sample_trajectories(agent, env, n_traj=1000, max_steps=1000, random_sampling=False):
     """
     Sample trajectories from the environment using the model.
+    todo: package trajectories from vectorized envs as python lists instead
 
     :param model: The model to use to sample the trajectories.
     :param env: The environment to sample the trajectories from, assuming vectorized.
@@ -41,7 +42,14 @@ def sample_trajectories(agent, env, n_traj=1000, max_steps=1000):
         traj_log_prob = 0
 
         for step in range(max_steps):
-            action, action_log_prob = agent.sample(obs)  # agent policy that uses the observation and info
+
+            if not random_sampling:
+                action, action_log_prob = agent.sample(obs)  # agent policy that uses the observation and info
+            else:
+                action = env.action_space.sample()
+                # this is uniform sampling
+                action_log_prob = -np.log(env.action_space.high - env.action_space.low)
+
             observation, reward, terminated, truncated, info = env.step(action)
             obs_traj.append(observation)
             a_traj.append(action)

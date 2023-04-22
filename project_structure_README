@@ -1,14 +1,18 @@
 
-priorities:
-First: get REINFORCE to work
+Thursday:
+- code TrajCompressor
+- code vanilla policy gradients
+- code train_vanilla_policyGradAgent.py:
 
-- PolicyGradientAgent.py
-- ReplayBuffer.py
-- Trainer.py
-- main.py
+Friday:
+- Code Exp1, Exp2, Exp3, including plotting
+- Start running everything during night
 
-Second: TrajCompressor.py
-Then: All experiments in order
+Saturday:
+- Code AgentKnowledgeTransfer
+- Code knowledge Transfer experiments
+- start tentative final report
+- start tentative Powerpoint presentation
 
 =====================================================
 Main Environments:

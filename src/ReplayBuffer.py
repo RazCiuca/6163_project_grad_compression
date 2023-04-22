@@ -7,6 +7,11 @@ import torch.nn as nn
 class ReplayBuffer:
     """
     class implementing a replay buffer, keeping track of importance sampling ratios
+
+    todo: we need the ability to add trajectories from vectorized environments
+    todo: compute mean and variance of states in buffer
+    todo: need to gracefully treat trajectories with different lengths
+
     """
     def __init__(self):
         self.buffer = []
@@ -34,4 +39,16 @@ class ReplayBuffer:
 
         for x in indices.sort()[::-1]:
             self.buffer.pop(x)
+
+    def purge_low_IS_ratios(self, threshold=1e-7):
+        raise NotImplemented
+
+    def get_data_mean_std(self):
+        """
+        return the mean and variance over the states currently in the buffer
+        """
+        raise NotImplemented
+
+    def get_average_return(self):
+        raise NotImplemented
 
