@@ -14,16 +14,23 @@ class MLP(nn.Module):
         :param nodes: list containing integers corresponding to our numbers of nodes in each layer
         """
         super(MLP, self).__init__()
+
+        self.s = 0.5
+
         self.nodes = nodes
         self.h_nodes = nodes[1:-1]  # all the hidden nodes
         # initialize the weights for all layers, with std = 1/nodes[i]**0.5
-        self.weights = nn.ParameterList([nn.Parameter(t.randn(nodes[i], nodes[i+1])/(nodes[i]**0.5), requires_grad=True)
+        self.weights = nn.ParameterList([nn.Parameter(self.s * t.randn(nodes[i], nodes[i+1])/(nodes[i]**0.5), requires_grad=True)
                         for i in range(0, len(nodes)-1)])
         # initialize the biases to 0
         self.biases = nn.ParameterList([nn.Parameter(t.zeros(nodes[i+1]), requires_grad=True)
                        for i in range(0, len(nodes)-1)])
         # list containing our transition functions, all ReLU instead of the last one, which is just the identity
         self.sigmas = [F.relu for _ in range(0, len(self.weights)-1)] + [lambda x: x]
+
+        # this arcane value for beta is to set the value of final_sigma(0) at 1, which for beta distributions is
+        # a uniform distribution
+        self.final_sigma = nn.Softplus(beta=np.log(2))
 
     def forward(self, inputs):
         """
@@ -36,7 +43,7 @@ class MLP(nn.Module):
         for w, b, sigma in zip(self.weights, self.biases, self.sigmas):
             x = sigma(x @ w + b)
 
-        return x
+        return self.final_sigma(x)
 
     def set_output_std(self, inputs, out_std):
         """

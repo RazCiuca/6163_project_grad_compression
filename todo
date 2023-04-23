@@ -1,5 +1,23 @@
 
+- finish debugging policy gradient
+    -> make it go faster on gpu then get it to actually train and get good results on some envs.
+- port everything to gpu
+- write train_vanilla script for all environments
+- write the TrajCompressor
+- write the experiment scripts
+- start planning the graphs and the total report
+
+- goals for today:
+    -> finish train_vanilla_policyGradAgent, make sure it runs and produces decent returns
+
+- tomorrow:
+    -> finish writing TrajCompressor and try it out a bit to make sure it works
+    -> write exp1, exp2, exp3
+
+
+=================================================
 Here's the training loop with policy gradients:
+=================================================
 
 - define a model which parametrises our policy
     -> here this is an MLP which outputs a beta distribution for each action dimension

@@ -16,6 +16,8 @@ class PolicyGradientAgent:
     def __init__(self, env):
 
         # get lower and upper bounds from env, and store them for beta computation
+        self.action_high_bound = t.tensor(env.single_action_space.high)
+        self.action_low_bound = t.tensor(env.single_action_space.low)
 
         # instantiate the model as MLP
         self.state_shape = env.single_observation_space.shape[0]
@@ -25,14 +27,17 @@ class PolicyGradientAgent:
         # instantiates the normalizer module
         self.state_mean = t.zeros(self.state_shape)
         self.state_std = t.ones(self.state_shape)
-
+        self.average_return = 0
         # instantiate the optimizer
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=1e-6, momentum=0.9)
 
     def sample(self, obs):
+        """
+        here obs is a numpy array
+        """
 
         # convert obs to torch tensor
-        obs_t = t.from_numpy(obs)
+        obs_t = t.from_numpy(obs).float()
         if len(obs_t.size()) != 2:
             obs_t = obs_t.unsqueeze(0)
 
@@ -42,43 +47,68 @@ class PolicyGradientAgent:
         # pass it through the network to get beta distribution parameters
         model_output = self.model(obs_t).detach()
         alphas = model_output[:, :self.action_shape]
-        betas = model_output[:, -(self.action_shape+1):]
+        betas = model_output[:, -self.action_shape:]
+
+        # print(model_output.mean(0))
 
         # sample from beta distribution with those parameters
         dist = Beta(alphas, betas)
 
-        return dist.sample()
+        new_sample = dist.sample()
+        # print(new_sample.size())
+
+        log_prob = dist.log_prob(new_sample).sum(dim=1)
+
+        return self.action_low_bound + (self.action_high_bound-self.action_low_bound) * new_sample.numpy(), log_prob.numpy()
 
     def gradient_step(self, trajs, only_return_grad=False):
+        """
+        assume trajs are already stored on gpu and in pytorch form
+        """
 
-        # assume trajs are already stored on gpu and in pytorch form
+        loss = 0
 
-        # pass all observations through normalizer
+        # the log of
+        log_IS_ratios = []
+        obs_, actions_, mean_rewards_, sampling_log_probs_, sample_indices_ = trajs
 
-        # pass trajectories through network, getting the beta parameters for all actions
+        for obs, actions, mean_rewards, sampling_log_probs, sample_indices in \
+                zip(obs_, actions_, mean_rewards_, sampling_log_probs_, sample_indices_):
 
-        # compute log of beta distribution for all trajectories
+            # pass all observations through normalizer obs has shape [max_traj_length, obs_space]
+            obs = (obs-self.state_mean)/self.state_std
 
-        # compute importance sampling ratios and normalize them
+            # pass trajectories through network, getting the beta parameters for all actions
+            model_output = self.model(obs)
+            alphas = model_output[:, :self.action_shape]
+            betas = model_output[:, -(self.action_shape):]
+            dist = Beta(alphas, betas)
+            # compute log of beta distribution for all trajectories
+            # remembering that actions are stored between self.action_low_bound and self.action_high_bound
+            log_probs = dist.log_prob((actions-self.action_low_bound)/(self.action_high_bound-self.action_low_bound))
 
-        # subtract average return from returns in batch
+            IS_ratio = t.exp(log_probs.detach().sum() - sampling_log_probs)
+            log_IS_ratios.append(IS_ratio)
 
-        # define the loss as the sum over trajectories of the log probability scaled by the importance
+            loss += - (mean_rewards - self.average_return) * IS_ratio * log_probs.mean()
 
-        # differentiate that loss
+        loss /= sum(log_IS_ratios)
 
-        # take optim step
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
-        # if only want to return grad, do that instead of taking an optim step
+        # todo: if only want to return grad, do that instead of taking an optim step
 
-        raise NotImplemented
+        return log_IS_ratios
+
 
     def update_input_mean_std(self, mean, std):
         """
         update the mean and standard deviation of the distribution of inputs we expect
         """
-        self.state_mean = mean
-        self.state_std = std
+        self.state_mean = t.tensor(mean).float()
+        self.state_std = t.tensor(std).float()
 
     def update_average_return(self, average_return):
         """

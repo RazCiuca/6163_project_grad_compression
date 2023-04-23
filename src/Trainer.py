@@ -37,14 +37,23 @@ class Trainer:
         self.agent.update_input_mean_std(data_mean, data_std)
         self.agent.update_average_return(average_return)
 
+
         # todo: call ReplayBuffer to send everything to gpu and have it stored in pytorch
 
         # for loop which samples from the replay buffer and does SGD
         for i in range(n_iterations):
+            if i%100 == 0:
+                print(f"training iteration: {i}")
 
             # sample trajectories from buffer
-            trajs_batch = self.buffer.sample(traj_batch_size)
-            self.agent.gradient_step(trajs_batch)
+            # obs, actions, mean_rewards, log_probs, sample_indices
+            obs, actions, mean_rewards, log_probs, sample_indices = self.buffer.sample(traj_batch_size)
+            trajs_batch = (obs, actions, mean_rewards, log_probs, sample_indices)
+            IS_ratios = self.agent.gradient_step(trajs_batch)
+
+            self.buffer.update_IS_ratios(IS_ratios, sample_indices)
 
         # remove trajectories which have low importance sampling ratios, which are now useless for our trainer
         self.buffer.purge_low_IS_ratios()
+
+        return average_return
