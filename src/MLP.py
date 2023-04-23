@@ -15,7 +15,7 @@ class MLP(nn.Module):
         """
         super(MLP, self).__init__()
 
-        self.s = 0.5
+        self.s = 1
 
         self.nodes = nodes
         self.h_nodes = nodes[1:-1]  # all the hidden nodes
@@ -26,11 +26,8 @@ class MLP(nn.Module):
         self.biases = nn.ParameterList([nn.Parameter(t.zeros(nodes[i+1]), requires_grad=True)
                        for i in range(0, len(nodes)-1)])
         # list containing our transition functions, all ReLU instead of the last one, which is just the identity
-        self.sigmas = [F.relu for _ in range(0, len(self.weights)-1)] + [lambda x: x]
+        self.sigmas = [t.relu for _ in range(0, len(self.weights)-1)] + [lambda x: x]
 
-        # this arcane value for beta is to set the value of final_sigma(0) at 1, which for beta distributions is
-        # a uniform distribution
-        self.final_sigma = nn.Softplus(beta=np.log(2))
 
     def forward(self, inputs):
         """
@@ -43,7 +40,7 @@ class MLP(nn.Module):
         for w, b, sigma in zip(self.weights, self.biases, self.sigmas):
             x = sigma(x @ w + b)
 
-        return self.final_sigma(x)
+        return x
 
     def set_output_std(self, inputs, out_std):
         """
@@ -70,16 +67,50 @@ class MLP(nn.Module):
             w.data = w.data * scaling_factor
             b.data = b.data * scaling_factor
 
+class MultidimensionalQuadraticRegression(nn.Module):
+    def __init__(self, input_dim, output_dim, order=2):
+        super(MultidimensionalQuadraticRegression, self).__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.order = order
+
+        # Linear layer for quadratic coefficients
+
+        self.second_order_dim = input_dim * input_dim
+        self.third_order_dim = input_dim * input_dim * input_dim if order == 3 else 0
+
+        self.w = nn.Parameter(t.zeros(self.third_order_dim + self.second_order_dim + input_dim, output_dim), requires_grad=True)
+        self.b = nn.Parameter(t.zeros(output_dim), requires_grad=True)
+
+    def forward(self, x):
+        batch_size = x.size(0)
+        x_second_order = t.einsum('bi, bj -> bij', x, x).reshape(batch_size, self.second_order_dim)
+
+        inputs = [x, x_second_order]
+
+        if self.order == 3:
+            x_third_order = t.einsum('bi, bj, bk -> bijk', x, x, x).reshape(batch_size, self.third_order_dim)
+            inputs.append(x_third_order)
+
+        # Concatenate interaction terms with the original features
+        x_extended = t.cat(inputs, dim=1)
+
+        # Apply linear layer to learn the coefficients
+        output = x_extended @ self.w + self.b
+
+        return output
 
 if __name__ == "__main__":
 
     # this is just a dummy test to make sure everything works fine
 
+    device = t.device('cuda')
+
     batch_size = 64
-    model = MLP([20, 20, 20, 20])
+    model = MultidimensionalQuadraticRegression(20, 10).to(device)
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    inputs = t.randn(batch_size, 20)
+    inputs = t.randn(batch_size, 20).to(device)
     outputs = model(inputs)
     objective = outputs.mean()
     objective.backward()

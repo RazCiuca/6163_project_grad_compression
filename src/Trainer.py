@@ -13,47 +13,93 @@ class Trainer:
     - stores the Agent instance
     - does the env_interact -> SGD_loop_through_data -> env_interact macro loop
     """
-    def __init__(self, env_name, num_envs=64):
+    def __init__(self, env_name, num_envs=64, init_exploration_std=0.1, device=t.device('cuda')):
 
+        self.device = device
         #  environment name
         self.env = gym.vector.make(env_name, num_envs=num_envs, asynchronous=True)
+        self.single_env = gym.make(env_name, render_mode='rgb_array')
         #  replay buffer which stores the trajectories
         self.buffer = ReplayBuffer()
         # instantiate the agent, the optimizer is stored in the agent
-        self.agent = PolicyGradientAgent(self.env)
+        self.agent = PolicyGradientAgent(self.env, init_exploration_std, device=device)
+
+    def get_initial_state_mean_variance(self):
+        print(f"computing initial state means and variances")
+        trajs = sample_trajectories(self.agent, self.env, 100, 100, random_sampling=True)
+        self.buffer.add_trajectories(trajs)
+        data_mean, data_std = self.buffer.get_data_mean_std()
+        self.agent.update_input_mean_std(data_mean, data_std)
+        self.buffer.buffer = []
 
     def train(self, n_samples, n_iterations, traj_batch_size, max_steps=1000, verbose=True,
-              sample_randomly_instead_of_agent=False):
+              sample_randomly_instead_of_agent=False, save_video_name=None):
 
         # sample new trajectories from the current agent and add to buffer
         trajs = sample_trajectories(self.agent, self.env, n_samples, max_steps,
                                     random_sampling=sample_randomly_instead_of_agent)
+
+        self.buffer.buffer = []
         # add to buffer
         self.buffer.add_trajectories(trajs)
 
-        # compute input means and variance of current states
-        data_mean, data_std = self.buffer.get_data_mean_std()
         average_return = self.buffer.get_average_return()
-        self.agent.update_input_mean_std(data_mean, data_std)
         self.agent.update_average_return(average_return)
 
-
-        # todo: call ReplayBuffer to send everything to gpu and have it stored in pytorch
+        if save_video_name is not None:
+            visual_traj = sample_trajectories(self.agent, self.env, 1, 1000, random_sampling=False, explore_std=0.05)
+            traj = visual_traj[0]
+            actions = traj['a']
+            get_video_from_env(self.single_env, actions, '../videos/video_' + save_video_name + f"_rew_{average_return:.4f}" + ".mp4")
 
         # for loop which samples from the replay buffer and does SGD
         for i in range(n_iterations):
-            if i%100 == 0:
+            if i%10 == 0:
                 print(f"training iteration: {i}")
 
             # sample trajectories from buffer
             # obs, actions, mean_rewards, log_probs, sample_indices
-            obs, actions, mean_rewards, log_probs, sample_indices = self.buffer.sample(traj_batch_size)
+
+            # ====================================== SAMPLING ======================================
+            # start = t.cuda.Event(enable_timing=True)
+            # end = t.cuda.Event(enable_timing=True)
+            # start.record()
+            obs, actions, mean_rewards, log_probs, sample_indices = self.buffer.sample(traj_batch_size, device=self.device)
+            # end.record()
+            # t.cuda.synchronize()
+            #
+            # if i%100==0: print(f"sampling time= {start.elapsed_time(end)}")
+
             trajs_batch = (obs, actions, mean_rewards, log_probs, sample_indices)
-            IS_ratios = self.agent.gradient_step(trajs_batch)
+
+            # ====================================== TRAINING ======================================
+            # start = t.cuda.Event(enable_timing=True)
+            # end = t.cuda.Event(enable_timing=True)
+            # start.record()
+            IS_ratios = self.agent.gradient_step(trajs_batch, print_grad_norm=(i%10 == 0))
+            # end.record()
+            # t.cuda.synchronize()
+            # if i % 100 == 0: print(f"training time= {start.elapsed_time(end)}")
 
             self.buffer.update_IS_ratios(IS_ratios, sample_indices)
+            # remove trajectories which have low importance sampling ratios, which are now useless for our trainer
+            buffer_size = self.buffer.purge_low_IS_ratios()
 
-        # remove trajectories which have low importance sampling ratios, which are now useless for our trainer
-        self.buffer.purge_low_IS_ratios()
+            # update average return weighted by the importance ratio
+            average_return = self.buffer.get_average_return()
+            self.agent.update_average_return(average_return)
+            print(f"average return: {average_return:.4f}")
+
+            # if we have less trajectories
+            if buffer_size < traj_batch_size:
+                break
+
+        # compute input means and variance of current states
+        # NOT IF WE DO POLYNOMIAL REGRESSION
+        # data_mean, data_std = self.buffer.get_data_mean_std()
+        # self.agent.update_input_mean_std(data_mean, data_std)
+
+        print(f"buffer_size={len(self.buffer.buffer)}")
 
         return average_return
+

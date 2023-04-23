@@ -1,18 +1,22 @@
 
-- finish debugging policy gradient
-    -> make it go faster on gpu then get it to actually train and get good results on some envs.
-- port everything to gpu
-- write train_vanilla script for all environments
+- (done) delete old episodes from buffer each time, to make sure the IS factors are not fucking with ti
+- (done) initialize exploration noise much lower
+- (done) save one video for every time to see the behavior.
+- (done) fix Importance sampling
+- (done) port the training process to gpu
+- (done) DO THE EVALUATION WITH A MUCH SMALLER EXPLORATION NOISE
+- (done) do quadratic and further regression network
+
+- (done) set a definite input mean and variance, so we don't change too often.
+- start with very short sequences, then make them longer as the model trains
+- (done) treat total return correctly, instead of just using mean reward, which becomes insensitive to episode lengths
+
+
 - write the TrajCompressor
-- write the experiment scripts
-- start planning the graphs and the total report
+- write the experiment scripts skeletons in broad strokes
+- plan the graphs to do in detail
+- think a bit about the presentation
 
-- goals for today:
-    -> finish train_vanilla_policyGradAgent, make sure it runs and produces decent returns
-
-- tomorrow:
-    -> finish writing TrajCompressor and try it out a bit to make sure it works
-    -> write exp1, exp2, exp3
 
 
 =================================================
