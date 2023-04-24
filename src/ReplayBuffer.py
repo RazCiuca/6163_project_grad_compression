@@ -56,6 +56,8 @@ class ReplayBuffer:
         max_IS = max([x['importance_ratio'] if 'importance_ratio' in x else 1 for x in self.buffer])
         print(f"max IS:{max_IS:.2f}, buffer size:{len(self.buffer)}")
 
+        max_IS = max(max_IS, 1)
+
         indices_to_remove = []
         for i in range(len(self.buffer)):
             if 'importance_ratio' in self.buffer[i]:
@@ -64,7 +66,7 @@ class ReplayBuffer:
 
         self.remove_indices_from_buffer(indices_to_remove)
 
-        return len(self.buffer)
+        return len(self.buffer), max_IS
 
     def get_data_mean_std(self):
         """

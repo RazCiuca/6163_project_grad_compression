@@ -67,7 +67,7 @@ def sample_trajectories(agent, env, n_traj=1000, max_steps=1000, random_sampling
     print(f'sampling {n_traj} trajs of length {max_steps}')
 
     for traj in range(n_iter):
-        print(f"{traj}/{n_iter}")
+        if traj%10 == 0: print(f"{traj}/{n_iter}")
         observation, info = env.reset()
 
         traj_log_prob = []
@@ -92,9 +92,10 @@ def sample_trajectories(agent, env, n_traj=1000, max_steps=1000, random_sampling
 
             observation = new_obs
 
-            # if terminated.any() or truncated.any() or step == max_steps-1:
-            if step == max_steps - 1:
-                print(f"terminated at step {step}")
+            if terminated.any() or step == max_steps-1:
+            # if step == max_steps - 1:
+                if traj % 10 == 0:
+                    print(f"terminated at step {step}")
                 trajectories.append({'obs': np.stack(obs_traj, axis=0),
                                      'a': np.stack(a_traj, axis=0),
                                      'r': np.stack(r_traj, axis=0),

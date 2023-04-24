@@ -13,7 +13,7 @@ from src.MLP import *
 class PolicyGradientAgent:
     """
     """
-    def __init__(self, env, exploration_std, device):
+    def __init__(self, env, exploration_std, device, lr=None, type_model='quad'):
 
         self.device = device
 
@@ -30,7 +30,13 @@ class PolicyGradientAgent:
 
         # self.model = MLP([self.state_shape, 128, self.action_shape])
         # self.model.set_output_std(t.randn(1000, self.state_shape), out_std=0.1)
-        self.model = MultidimensionalQuadraticRegression(self.state_shape, self.action_shape, order=2)
+        if type_model == 'quad':
+            self.model = MultidimensionalQuadraticRegression(self.state_shape, self.action_shape, order=2)
+        elif type_model == 'cube':
+            self.model = MultidimensionalQuadraticRegression(self.state_shape, self.action_shape, order=3)
+        elif type_model == 'net':
+            self.model = MLP([self.state_shape, 128, self.action_shape])
+            self.model.set_output_std(t.randn(1000, self.state_shape), out_std=0.1)
 
         self.model = self.model.to(device)
         self.explore_std = exploration_std
@@ -41,7 +47,8 @@ class PolicyGradientAgent:
         self.state_std = t.ones(self.state_shape, device=self.device)
         self.average_return = 0
         # instantiate the optimizer
-        self.optimizer = optim.SGD(self.model.parameters(), lr=1e-5, momentum=0.9)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=(lr if lr is not None else 1e-4), momentum=0.9)
+
 
     def sample(self, obs, veto_explore_std=None):
         """

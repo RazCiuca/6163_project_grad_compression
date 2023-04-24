@@ -1,5 +1,6 @@
 
 
+import os
 # import sys
 # sys.path.append('/')
 import torch as t
@@ -21,39 +22,83 @@ if __name__ == "__main__":
 
     # also storing intermitent videos from our policies
 
-    trainer = Trainer("Ant-v4", num_envs=64, device=t.device('cpu'), init_exploration_std=0.1)
+    env_names = {1: 'Ant-v4',
+                 2: 'HalfCheetah-v4',
+                 3: 'Hopper-v4',
+                 4: 'HumanoidStandup-v4',
+                 5: 'Humanoid-v4',
+                 6: 'Reacher-v4',
+                 7: 'Pusher-v4',
+                 8: 'Walker2d-v4'}
 
-    # update the state means and variance with randomly sampled actions
-    trainer.get_initial_state_mean_variance()
+    ant_dict = {'env_name': env_names[1],
+                'num_envs': 32,
+                'lr' : 1e-4,
+                'init_exploration_std': 0.1,
+                'n_samples': 128,
+                'n_iterations': 100,
+                'max_IS': 1e4,
+                'traj_batch_size': 128,
+                'max_steps': 200}
 
-    for j in range(1000):
-        average_reward_in_buffer = trainer.train(n_samples=1000, n_iterations=50,
-                                              traj_batch_size=1024, max_steps=200,
-                                              verbose=True, sample_randomly_instead_of_agent=False,
-                                              save_video_name=str(j))
+    cheetah_dict = {'env_name': env_names[2],
+                    'num_envs': 32,
+                    'lr': 1e-4,
+                    'init_exploration_std': 0.1,
+                    'n_samples': 256,
+                    'n_iterations': 100,
+                    'max_IS': 1e4,
+                    'traj_batch_size': 256,
+                    'max_steps': 200}
 
-        # trainer.agent.explore_std
+    hopper_dict = {'env_name': env_names[3],
+                   'num_envs': 1,
+                   'lr': 1e-4,
+                   'init_exploration_std': 0.1,
+                   'n_samples': 256,
+                   'n_iterations': 100,
+                   'max_IS': 1e4,
+                   'traj_batch_size': 256,
+                   'max_steps': 200}
 
-        # agent = trainer.agent
-        # env = trainer.env
-        # buffer = trainer.buffer
-        # trajs = sample_trajectories(agent, env, n_traj=2, max_steps=3, random_sampling=False)
-        #
-        # print(trajs[0]['obs'])
-        # # print(trajs[1]['sampling_log_prob'])
-        #
-        # buffer.buffer = []  # todo: remove once we know IS works
-        # # add to buffer
-        # buffer.add_trajectories(trajs)
-        #
-        # average_return = buffer.get_average_return()
-        # agent.update_average_return(average_return)
-        #
-        # obs, actions, mean_rewards, log_probs, sample_indices = buffer.sample(2)
-        #
-        # trajs_batch = (obs, actions, mean_rewards, log_probs, sample_indices)
-        # IS_ratios = agent.gradient_step(trajs_batch, print_grad_norm=True)
+    pusher_dict = {'env_name': env_names[7],
+                   'num_envs': 32,
+                   'lr': 1e-4,
+                    'init_exploration_std': 0.2,
+                    'n_samples': 1024,
+                    'n_iterations': 100,
+                    'max_IS': 1e4,
+                    'traj_batch_size': 1024,
+                    'max_steps': 200}
 
+    for type_model in ['quad', 'cube', 'net']:
+        for exp_dict in [ant_dict, cheetah_dict, hopper_dict, pusher_dict]:
+            for i in range(3):
 
-    # print(f"iteration {j}, average_reward:{average_reward_in_buffer}")
+                # experiment name to save with
+                exp_name = type_model + '_' + exp_dict['env_name'] + '_' + str(i)
+
+                os.mkdir('../data/' + exp_name)
+                videos_folder = '../data/' + exp_name + '/videos'
+                os.mkdir(videos_folder)
+
+                trainer = Trainer(exp_dict, exp_dict['env_name'], exp_name,
+                                  type_model, num_envs=exp_dict['num_envs'],
+                                  init_exploration_std=exp_dict['init_exploration_std'],
+                                  device=t.device('cpu'), lr=exp_dict['lr'])
+
+                try:
+                    for j in range(200):
+                        average_reward_in_buffer = trainer.train(n_samples=exp_dict['n_samples'],
+                                                                 n_iterations=exp_dict['n_iterations'],
+                                                                 max_IS=exp_dict['max_IS'],
+                                                                 traj_batch_size=exp_dict['traj_batch_size'],
+                                                                 max_steps=exp_dict['max_steps'],
+                                                                 verbose=True,
+                                                                 sample_randomly_instead_of_agent=False,
+                                                                 save_video_name= videos_folder + '/' + str(j) if j % 5 == 0 else None)
+
+                        trainer.save_state()
+                except:
+                    continue
 

@@ -8,14 +8,17 @@
 - (done) do quadratic and further regression network
 
 - (done) set a definite input mean and variance, so we don't change too often.
-- start with very short sequences, then make them longer as the model trains
 - (done) treat total return correctly, instead of just using mean reward, which becomes insensitive to episode lengths
 
+- (done) experiment a bit with just how quickly we can learn with the polynomial and REINFORCE
 
-- write the TrajCompressor
+
+- write script which runs and saves the weights for a sequence of experiments, for multiple seeds for each model,
+  and for both the Quadratic regressor, the cubic, and a one-layer neural net for each experiment.
+  -> but prioritize having a single quadratic for each environment
+
 - write the experiment scripts skeletons in broad strokes
 - plan the graphs to do in detail
-- think a bit about the presentation
 
 
 

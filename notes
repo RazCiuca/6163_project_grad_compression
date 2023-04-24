@@ -1,0 +1,19 @@
+
+For quadratic learning, with ant, episode-length  = 200, n_iterations=50, max_IS=40000, traj_batch_size=64, max_steps=200,
+works well.
+neural nets with batch 64 work much worse.
+
+cubic learner with batch_size=64: very quickly hits maximum IS ratio, so not many iterations needed.
+
+cubic learning on cheetah needs more iterations to hit maxIS limit.
+
+quadratic learning on humanoid needs veeeery small learning rate
+
+quadratic learning on reacher needs high sample size, like 5000
+
+envs that depend on termination conditions to learn need to have n_envs put to a low number
+
+things to talk about in presentation:
+- Neural Nets Are Bad For Mujoco Tasks!!!
+    -> use quadratic models, they learn much faster, requires less interactions, etc.
+

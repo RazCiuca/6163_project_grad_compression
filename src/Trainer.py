@@ -1,4 +1,6 @@
 
+import pickle
+import copy
 import torch as t
 import torch.optim as optim
 from utils import *
@@ -13,7 +15,16 @@ class Trainer:
     - stores the Agent instance
     - does the env_interact -> SGD_loop_through_data -> env_interact macro loop
     """
-    def __init__(self, env_name, num_envs=64, init_exploration_std=0.1, device=t.device('cuda')):
+    def __init__(self, exp_dict, env_name, exp_name, type_model, num_envs=64, init_exploration_std=0.1, device=t.device('cuda'), lr=None):
+
+        self.run_dict = { 'exp_dict': exp_dict,
+                          'env_name': env_name,
+                          'exp_name': exp_name,
+                          'type_model': type_model,
+                          'model_dict': [],
+                          'mean_reward': []}
+
+        self.exp_name = exp_name
 
         self.device = device
         #  environment name
@@ -22,7 +33,11 @@ class Trainer:
         #  replay buffer which stores the trajectories
         self.buffer = ReplayBuffer()
         # instantiate the agent, the optimizer is stored in the agent
-        self.agent = PolicyGradientAgent(self.env, init_exploration_std, device=device)
+        self.agent = PolicyGradientAgent(self.env, init_exploration_std, device=device, lr=lr, type_model=type_model)
+
+    def save_state(self):
+        # save the dict with pickle
+        pickle.dump(self.run_dict, open('../data/' + self.run_dict['exp_name'] + '/run_dict', 'wb'))
 
     def get_initial_state_mean_variance(self):
         print(f"computing initial state means and variances")
@@ -32,7 +47,7 @@ class Trainer:
         self.agent.update_input_mean_std(data_mean, data_std)
         self.buffer.buffer = []
 
-    def train(self, n_samples, n_iterations, traj_batch_size, max_steps=1000, verbose=True,
+    def train(self, n_samples, n_iterations, max_IS, traj_batch_size, max_steps=1000, verbose=True,
               sample_randomly_instead_of_agent=False, save_video_name=None):
 
         # sample new trajectories from the current agent and add to buffer
@@ -46,11 +61,13 @@ class Trainer:
         average_return = self.buffer.get_average_return()
         self.agent.update_average_return(average_return)
 
+        self.run_dict['mean_reward'].append(average_return)
+
         if save_video_name is not None:
             visual_traj = sample_trajectories(self.agent, self.env, 1, 1000, random_sampling=False, explore_std=0.05)
             traj = visual_traj[0]
             actions = traj['a']
-            get_video_from_env(self.single_env, actions, '../videos/video_' + save_video_name + f"_rew_{average_return:.4f}" + ".mp4")
+            get_video_from_env(self.single_env, actions, save_video_name + f"_rew_{average_return:.4f}" + ".mp4")
 
         # for loop which samples from the replay buffer and does SGD
         for i in range(n_iterations):
@@ -83,7 +100,7 @@ class Trainer:
 
             self.buffer.update_IS_ratios(IS_ratios, sample_indices)
             # remove trajectories which have low importance sampling ratios, which are now useless for our trainer
-            buffer_size = self.buffer.purge_low_IS_ratios()
+            buffer_size, current_max_IS = self.buffer.purge_low_IS_ratios()
 
             # update average return weighted by the importance ratio
             average_return = self.buffer.get_average_return()
@@ -91,7 +108,8 @@ class Trainer:
             print(f"average return: {average_return:.4f}")
 
             # if we have less trajectories
-            if buffer_size < traj_batch_size:
+            if current_max_IS > max_IS or len(self.buffer.buffer) <= traj_batch_size/2:
+                print('hit max allowed IS ratio')
                 break
 
         # compute input means and variance of current states
@@ -100,6 +118,7 @@ class Trainer:
         # self.agent.update_input_mean_std(data_mean, data_std)
 
         print(f"buffer_size={len(self.buffer.buffer)}")
+        self.run_dict['model_dict'].append(copy.deepcopy(self.agent.model.state_dict()))
 
         return average_return
 
