@@ -1,7 +1,86 @@
+import numpy as np
+
 from MLP import *
 import imageio
 
-def get_video_from_env(env, actions, save_path=None):
+def flatten_params(params):
+
+    return t.cat([x.flatten() for x in params])
+
+def cosine_similarity(params1, params2):
+
+    norm1 = 0
+    norm2 = 0
+
+    dot_product = 0
+
+    for p1, p2 in zip(params1, params2):
+        dot_product += t.sum(p1*p2)
+        norm1 += t.sum(p1**2)
+        norm2 += t.sum(p2**2)
+
+    return dot_product / (norm1**0.5 * norm2**0.5)
+
+
+
+def find_closest_ray_in_vector_span(target_w, vector_basis, init_alpha=None, verbose=False):
+    """
+    target_w is a detached pytorch tensor
+    vector_basis is a list of detached tensors of same size as target_w
+    init_alpha should be a tensor of size len(vector_basis)
+    """
+
+    alpha = init_alpha if init_alpha is not None else t.ones(len(vector_basis))
+    alpha.requires_grad = True
+
+    # better this than SGD or Adam
+    optimizer = optim.LBFGS([alpha],
+                            history_size=10,
+                            max_iter=20,
+                            line_search_fn="strong_wolfe")
+
+    # size [len(vector_basis), vector_basis[0].size(0)]
+    vector_basis = t.stack(vector_basis, dim=0)
+
+    target_w_norm = t.norm(target_w)
+
+    # size [len(vector_basis)]
+    dot_products = t.sum(target_w * vector_basis, dim=1)
+
+    loss_item = 0
+
+    # this is a function we provide to the LBFGS optimizer
+    def closure():
+
+        optimizer.zero_grad()
+
+        # maximize cosine similarity between target_w and the spanned vector from vector_basis
+        spanned_norm = t.norm(t.sum(alpha.unsqueeze(1) * vector_basis, dim=0))
+        loss = -t.sum(alpha * dot_products) / (target_w_norm * spanned_norm)
+
+        loss.backward()
+
+        return loss
+
+    for i in range(0, 1):
+
+        # this is a function we provide to the LBFGS optimizer
+
+        optimizer.step(closure)
+
+        if verbose:
+            loss_item = closure().item()
+            print(f"{i}:{-loss_item}")
+
+    if not verbose:
+        loss_item = closure().item()
+
+    alpha = (alpha/t.norm(alpha)).detach()
+
+    return -loss_item, alpha, t.sum(alpha.unsqueeze(1) * vector_basis, dim=0).detach()
+
+
+def get_video_from_env(env, actions, save_path=None, seed=None, alphas=None):
     """
     todo: better to sample actions from our agent
     Get a video from the environment using the given actions.
@@ -11,10 +90,25 @@ def get_video_from_env(env, actions, save_path=None):
     :return: The video as a list of images.
     """
     video = []
-    observation, info = env.reset()
-    for action in actions:
+    observation, info = env.reset(seed=seed)
+    for i in range(len(actions)):
+        action = actions[i]
         observation, reward, terminated, truncated, info = env.step(action)
-        video.append(env.render())
+
+        frame = env.render()
+        if alphas is not None:
+            alpha = alphas[i]
+
+            fraction_between_min_max = (alpha - np.min(alphas))/(np.max(alphas) - np.min(alphas))
+
+            reds = int(256*(1-fraction_between_min_max)) * np.ones([frame.shape[0], 30, 1], dtype=np.uint8)
+            greens = int(256*fraction_between_min_max) * np.ones([frame.shape[0], 30, 1], dtype=np.uint8)
+            blues = np.zeros_like(reds, dtype=np.uint8)
+
+            border = np.concatenate([reds, greens, blues], axis=2)
+            frame = np.concatenate([frame, border], axis=1)
+
+        video.append(frame)
         if terminated or truncated:
             break
 
@@ -44,7 +138,22 @@ def split_vectorized_traj(trajs):
 
     return new_trajs
 
-def sample_trajectories(agent, env, n_traj=1000, max_steps=1000, random_sampling=False, explore_std=None):
+
+def get_state_trajectory_from_action_seq(action_seq, env, seed=42):
+
+    obs_list = []
+
+    observation, info = env.reset(seed=seed)
+
+    for i in range(0, len(action_seq)):
+        new_obs, reward, terminated, truncated, info = env.step(action_seq[i])
+        obs_list.append(observation)
+        observation = new_obs
+
+    return obs_list
+
+
+def sample_trajectories(agent, env, n_traj=1000, max_steps=1000, random_sampling=False, explore_std=None, seed=None):
     """
     Sample trajectories from the environment using the model.
 
@@ -68,7 +177,7 @@ def sample_trajectories(agent, env, n_traj=1000, max_steps=1000, random_sampling
 
     for traj in range(n_iter):
         if traj%10 == 0: print(f"{traj}/{n_iter}")
-        observation, info = env.reset()
+        observation, info = env.reset(seed=seed)
 
         traj_log_prob = []
         for step in range(max_steps):
@@ -120,9 +229,17 @@ if __name__ == "__main__":
     env_name = "HalfCheetah-v4"
     num_envs = 32
     env = gym.vector.make(env_name, num_envs=num_envs, asynchronous=True)
-    agent = PolicyGradientAgent(env, device=t.device('cpu'), init_exploration_std=0.1)
+    agent = PolicyGradientAgent(env, device=t.device('cpu'), exploration_std=0.1)
 
     trajs = sample_trajectories(agent, env, 20, max_steps=100, random_sampling=False)
 
     # obs, info = env.reset()
     # action, action_log_prob = agent.sample(obs)
+
+    target_w = 1e-5*t.randn(10000)
+    vector_basis = [1e-5*t.randn(10000) for x in range(500)]
+
+    for i in range(10):
+        loss, alphas, _ = find_closest_ray_in_vector_span(target_w, vector_basis, verbose=True)
+        vector_basis += [1e-5*t.randn(10000) for x in range(10)]
+

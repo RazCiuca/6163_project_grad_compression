@@ -61,6 +61,9 @@ class Trainer:
         average_return = self.buffer.get_average_return()
         self.agent.update_average_return(average_return)
 
+        # data_mean, data_std = self.buffer.get_data_mean_std()
+        # self.agent.update_input_mean_std(data_mean, data_std)
+
         self.run_dict['mean_reward'].append(average_return)
 
         if save_video_name is not None:
@@ -81,13 +84,13 @@ class Trainer:
             # start = t.cuda.Event(enable_timing=True)
             # end = t.cuda.Event(enable_timing=True)
             # start.record()
-            obs, actions, mean_rewards, log_probs, sample_indices = self.buffer.sample(traj_batch_size, device=self.device)
+            obs, actions, sum_rewards, log_probs, sample_indices = self.buffer.sample(traj_batch_size, device=self.device)
             # end.record()
             # t.cuda.synchronize()
             #
             # if i%100==0: print(f"sampling time= {start.elapsed_time(end)}")
 
-            trajs_batch = (obs, actions, mean_rewards, log_probs, sample_indices)
+            trajs_batch = (obs, actions, sum_rewards, log_probs, sample_indices)
 
             # ====================================== TRAINING ======================================
             # start = t.cuda.Event(enable_timing=True)

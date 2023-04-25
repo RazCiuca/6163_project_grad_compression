@@ -32,7 +32,7 @@ class PolicyGradientAgent:
         # self.model.set_output_std(t.randn(1000, self.state_shape), out_std=0.1)
         if type_model == 'quad':
             self.model = MultidimensionalQuadraticRegression(self.state_shape, self.action_shape, order=2)
-        elif type_model == 'cube':
+        elif type_model == 'cubic':
             self.model = MultidimensionalQuadraticRegression(self.state_shape, self.action_shape, order=3)
         elif type_model == 'net':
             self.model = MLP([self.state_shape, 128, self.action_shape])
@@ -71,6 +71,32 @@ class PolicyGradientAgent:
         log_prob = dist.log_prob(new_sample).sum(dim=1)
 
         return new_sample.cpu().numpy(), log_prob.cpu().numpy()
+
+
+    def get_model_gradient_for_each_action(self, state_sequence, action_seq):
+        """
+        state_sequences: list of pytorch tensors
+        action_seq: list of pytorch tensors
+
+        given a state sequence and an action sequence, returns a list of flattened tensors
+        reprensenting the gradient of the log likelihood of the action at each state in the sequence
+        """
+        flattened_grads = []
+        actions_means = [self.model((t.tensor(obs, dtype=t.float32).unsqueeze(0) - self.state_mean) / self.state_std)
+                         for obs in state_sequence]
+
+        for action_mean, actual_action in zip(actions_means, action_seq):
+            self.optimizer.zero_grad()
+
+            # print(obs.mean(dim=0))
+            dist = Normal(action_mean, self.explore_std)
+            log_probs = dist.log_prob(t.tensor( actual_action, dtype=t.float32))
+
+            log_probs.mean().backward()
+
+            flattened_grads.append(t.cat([x.grad.flatten().clone().detach() for x in self.model.parameters()]))
+
+        return flattened_grads
 
     def gradient_step(self, trajs, only_return_grad=False, print_grad_norm=True):
         """

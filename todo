@@ -1,24 +1,17 @@
 
-- (done) delete old episodes from buffer each time, to make sure the IS factors are not fucking with ti
-- (done) initialize exploration noise much lower
-- (done) save one video for every time to see the behavior.
-- (done) fix Importance sampling
-- (done) port the training process to gpu
-- (done) DO THE EVALUATION WITH A MUCH SMALLER EXPLORATION NOISE
-- (done) do quadratic and further regression network
 
-- (done) set a definite input mean and variance, so we don't change too often.
-- (done) treat total return correctly, instead of just using mean reward, which becomes insensitive to episode lengths
-
-- (done) experiment a bit with just how quickly we can learn with the polynomial and REINFORCE
-
-
-- write script which runs and saves the weights for a sequence of experiments, for multiple seeds for each model,
-  and for both the Quadratic regressor, the cubic, and a one-layer neural net for each experiment.
-  -> but prioritize having a single quadratic for each environment
-
-- write the experiment scripts skeletons in broad strokes
-- plan the graphs to do in detail
+- make list of figures we want to generate
+- finish TrajCompressor
+    -> does hillclimbing by random selection with small variance and/or CEM
+    -> starts by randomly sampling trajectories with fairly small dimensions
+- write script which compresses the trajectories for a given model through training
+    -> visualize the trajectories made from going from beginning to end of motion
+    -> visualize those made by copying the gradient from a veeery large batch
+    -> visualize trajectories compressing random weight changes
+    -> plot how much generalization there is
+    -> possible extensions and uses of the idea
+    -> quadratic vs neural network learners.
+- play around with generating better model histories?
 
 
 
@@ -60,38 +53,3 @@ Here's the training loop with policy gradients:
 
 - TrajCompressor.py
 
-- first task: code the policy gradient agent, and run it on a bunch of environments
-
-
-
-
-
-- (done) configure gymnasium and make sure we can run the Cheetah env
-- (done) configure MLP with rescaling and output norm.
-- (done) figure out how to store video from the env.
-- use Async Vector Env to sample from multiple copies of the environment in parallel
-- change model to be able to sample from a distribution
-- implement naive reinforce without replay buffer.
-- refactor reinforce into its own class
-- train a reinforce agent and store checkpoints.
-- use CEM to optimize for the gradient cosine distance with the policy gradient from the initial, random policy
-
-todo in order:
-priority: getting reinforce to actually work on cheetah
-
-- implement the async environment to collect faster
-- sample a bunch of random actions to compute the observations means and variances
-- implement a replay buffer
-- implement importance sampling to use much larger batch sizes, and then ignore old policies which deviate too much in log likelihood
-- have the network output a beta distribution since the action space is between -1 and 1
-- send everything to gpu to compute things much faster
-- train for many steps between environment interactions
-- save videos once in a while in order to actually see what the policy is doing in training.
-- correctly treat trajectories which are terminated early
-
-1. (done) sample_trajectories update
-2. (done) agent sampling with beta distribution
-3. replay_buffer variance and stats computation, buffer importance ratios tracking
-4. (done) agent training loop between environment interactions
-5. main env interact -> replay_buffer -> agent training loop in main
-6. saving models and videos

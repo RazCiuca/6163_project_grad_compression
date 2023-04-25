@@ -1,6 +1,20 @@
 
 For quadratic learning, with ant, episode-length  = 200, n_iterations=50, max_IS=40000, traj_batch_size=64, max_steps=200,
 works well.
+the following works well for ant:
+ant_dict = {'env_name': env_names[1],
+                'num_envs': 16,
+                'lr' : 1e-4,
+                'init_exploration_std': 0.1,
+                'n_samples': 1024,
+                'n_iterations': 50,
+                'max_IS': 4e4,
+                'traj_batch_size': 1024,
+                'max_steps': 200}
+                compute state means and variances only at beginning of training -> though unknown if it has an effect
+
+
+
 neural nets with batch 64 work much worse.
 
 cubic learner with batch_size=64: very quickly hits maximum IS ratio, so not many iterations needed.
@@ -16,4 +30,11 @@ envs that depend on termination conditions to learn need to have n_envs put to a
 things to talk about in presentation:
 - Neural Nets Are Bad For Mujoco Tasks!!!
     -> use quadratic models, they learn much faster, requires less interactions, etc.
+
+
+which ones are subpar?
+
+- ant
+-
+
 

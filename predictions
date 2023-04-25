@@ -1,0 +1,38 @@
+
+Presentation structure:
+
+1. Presentation of the algorithm, the motivation, and the predictions
+
+2. Presentation of results, and videos of agents.
+
+
+=======================================
+Basic gradient compression concept
+=======================================
+
+=======================================
+Experiment Predictions, before running experiments:
+=======================================
+
+- Will trajectory compression actually find a trajectory with large cosine similarity?
+    -> **Prediction**: YES, we have a lot of free parameters to optimise here, a full trajectory is 1000 actions, which is a lot of room to
+       exert optimisation pressure. We also optimise for a sequence of actions which will produce individual action gradients
+       which span a space, and then we find the point in that space that is closest to the desired
+
+- What will the trajectories of high similarity to the total weight change look like? Will they have high total return?
+    -> **Prediction**: They will not necessarily be high return. The way to make the gradient be in the direction of the
+       final weights will be to have the trajectory basically exhibit all the most common mistakes and the way to correct them,
+       the optimised coefficients for the mistakes will be negative, basically telling the network not to make those actions.
+       The trajectory should look very weird, with periods of good behavior broken up with periods aimed at sending the agent
+       into a variety of bad states.
+
+- Will trajectories generalize from quadratic learner to the neural network?
+    -> **Prediction**: YES, the trajectory will exhibit good and bad behavior, and there shouldn't be much model-specific information
+       included in the trajectories
+
+- Will trajectory compression be able to compress arbitrary weight directions as well as compressing gradients?
+    -> **Prediction**: NO, the weight directions we're trying to reproduce were produced by gradient descent on trajectories
+       from the same environment, the gradients from the environment shouldn't be able to reproduce an arbitrary weight direction.
+
+- How does the return vary along the line-search direction of the compressed gradient?
+    -> **Prediction**: It will max out somewhat lower than the maximum achieved return on the original network.

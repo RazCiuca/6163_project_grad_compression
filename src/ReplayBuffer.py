@@ -58,13 +58,14 @@ class ReplayBuffer:
 
         max_IS = max(max_IS, 1)
 
-        indices_to_remove = []
-        for i in range(len(self.buffer)):
-            if 'importance_ratio' in self.buffer[i]:
-                if self.buffer[i]['importance_ratio']/max_IS < threshold:
-                    indices_to_remove.append(i)
-
-        self.remove_indices_from_buffer(indices_to_remove)
+        # todo: sometimes this removes literally all data and stops the whole run...
+        # indices_to_remove = []
+        # for i in range(len(self.buffer)):
+        #     if 'importance_ratio' in self.buffer[i]:
+        #         if self.buffer[i]['importance_ratio']/max_IS < threshold:
+        #             indices_to_remove.append(i)
+        #
+        # self.remove_indices_from_buffer(indices_to_remove)
 
         return len(self.buffer), max_IS
 
