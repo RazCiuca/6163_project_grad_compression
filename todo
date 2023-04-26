@@ -1,17 +1,44 @@
 
 
-- make list of figures we want to generate
-- finish TrajCompressor
-    -> does hillclimbing by random selection with small variance and/or CEM
-    -> starts by randomly sampling trajectories with fairly small dimensions
-- write script which compresses the trajectories for a given model through training
-    -> visualize the trajectories made from going from beginning to end of motion
-    -> visualize those made by copying the gradient from a veeery large batch
-    -> visualize trajectories compressing random weight changes
-    -> plot how much generalization there is
-    -> possible extensions and uses of the idea
-    -> quadratic vs neural network learners.
-- play around with generating better model histories?
+- also return the distance with the summed gradient to see what that gives
+- plot predicted growth of cosine distance for completely random vectors in the given dimention
+- plot the growth for a random sequence of actions of given length
+- growth of actions sampled by the model?
+- random weight directions reconstruct?
+- generalize to other architecture?
+- plot reward along line search
+
+To obtain:
+
+todo: write the script for the line search along the compressed gradient direction.
+
+todo now: make all the graphs required
+
+- videos of compressed trajs for Ant with quad, net, using the alphas and not using alphas
+    -> use the filenames of the compressed videos to make the graphs
+
+- Plot of the cosine similarity as a function of traj_len for Ant with quad and net, both for using alphas and not using alphas
+- Plot the average reward for Ant with quad and net, along a line search in the direction pointed to by the compressed gradient
+- Plot the cosine similarity for Ant for quad/net with a random weight vector as a function of traj_len
+- plot the cos.sim. of all the trajectories found with quad on ant, to net, and see how the cosine similarity varies.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -3,11 +3,27 @@ import numpy as np
 from MLP import *
 import imageio
 
+def unflatten_params(flat_tensor_param, like_params):
+    """
+    takes a flat_tensor_param and produces
+    """
+    sizes = [np.prod(list(x.size())) for x in like_params]
+
+    index = 0
+
+    output = []
+
+    for i in range(len(like_params)):
+        output.append(flat_tensor_param[index:index+sizes[i]].reshape(like_params[i].size()))
+        index += sizes[i]
+
+    return output
+
 def flatten_params(params):
 
     return t.cat([x.flatten() for x in params])
 
-def cosine_similarity(params1, params2):
+def cosine_similarity_params(params1, params2):
 
     norm1 = 0
     norm2 = 0
@@ -236,10 +252,11 @@ if __name__ == "__main__":
     # obs, info = env.reset()
     # action, action_log_prob = agent.sample(obs)
 
-    target_w = 1e-5*t.randn(10000)
-    vector_basis = [1e-5*t.randn(10000) for x in range(500)]
+    target_w = t.randn(6000)
+    vector_basis = [t.randn(6000) for x in range(10)]
 
-    for i in range(10):
+    for i in range(50):
         loss, alphas, _ = find_closest_ray_in_vector_span(target_w, vector_basis, verbose=True)
-        vector_basis += [1e-5*t.randn(10000) for x in range(10)]
+        vector_basis += [t.randn(6000) for x in range(10)]
+        print(f"i:{i}, loss:{loss:.5f}")
 

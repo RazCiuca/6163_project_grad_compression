@@ -18,7 +18,7 @@ class TrajCompressor:
         self.single_env = gym.make(env_name, render_mode='rgb_array')
         self.history_dict = history_dict
 
-    def find_cosine_distance_of_sequence(self, agent, target_w, state_seq, action_seq, init_alpha=None):
+    def find_cosine_distance_of_sequence(self, agent, target_w, state_seq, action_seq, in_action_grad_subspace=True, init_alpha=None):
         """
         given an agent, a target direction in its weight space, a given sequence of states and sequence of actions,
         find the cosine similarity of the gradients engendered by the state-action sequence and the target weight direction.
@@ -31,11 +31,17 @@ class TrajCompressor:
         """
 
         model_gradients = agent.get_model_gradient_for_each_action(state_seq, action_seq)
-        cosine_similarity, alphas, closest_grad = find_closest_ray_in_vector_span(target_w, model_gradients, init_alpha=init_alpha)
+        if in_action_grad_subspace:
+            cosine_sim, alphas, closest_grad = find_closest_ray_in_vector_span(target_w, model_gradients, init_alpha=init_alpha)
+        else:
+            closest_grad = sum(model_gradients)
+            cosine_sim = cosine_similarity_params([target_w], [closest_grad])
+            alphas = None
 
-        return cosine_similarity, alphas, closest_grad
+        return cosine_sim, alphas, closest_grad
 
-    def find_compressed_grad_trajectory(self, agent, target_w, traj_length, verbose=False, init_action_seq=None, init_alpha=None):
+    def find_compressed_grad_trajectory(self, agent, target_w, traj_length, in_action_grad_subspace=True
+                                        , verbose=False, init_action_seq=None, init_alpha=None):
         """
         should find a trajectory of length l which make it so that they produce
         gradients very close to the true policy gradient, or any other desired weight vector.
@@ -57,26 +63,31 @@ class TrajCompressor:
         # this sequence is what we actually optimise
         action_seq = [action_explore_std * self.single_env.action_space.sample() for i in range(length_to_optim)]
 
+        # if not using the action_grad_subspace algo, optimise the entire action sequence
+        if not in_action_grad_subspace:
+            action_seq = prev_action_seq + action_seq
+
         if init_alpha is not None:
             init_alpha = t.cat([init_alpha, t.zeros(traj_length - len(init_alpha))])
 
         state_seq = get_state_trajectory_from_action_seq(prev_action_seq + action_seq, self.single_env, seed=42)
         cosine_similarity, alphas, closest_grad = \
-            self.find_cosine_distance_of_sequence(agent, target_w, state_seq, prev_action_seq + action_seq, init_alpha=init_alpha)
+            self.find_cosine_distance_of_sequence(agent, target_w, state_seq, prev_action_seq + action_seq,
+                                                  in_action_grad_subspace=in_action_grad_subspace, init_alpha=init_alpha)
 
         print(f"cos similarity before optimizing: {cosine_similarity:.7f}")
 
-        for i in range(100):
+        for i in range(200):
 
             new_action_seq = [x + action_explore_std * np.random.randn(*x.shape) for x in action_seq]
-
-            new_concated_seq = prev_action_seq + new_action_seq
+            new_concated_seq = prev_action_seq + new_action_seq if in_action_grad_subspace else new_action_seq
 
             new_state_seq = get_state_trajectory_from_action_seq(new_concated_seq, self.single_env, seed=42)
             new_cosine_similarity, new_alphas, new_closest_grad = \
-                self.find_cosine_distance_of_sequence(agent, target_w, new_state_seq, new_concated_seq, init_alpha=alphas)
+                self.find_cosine_distance_of_sequence(agent, target_w, new_state_seq, new_concated_seq,
+                                                      in_action_grad_subspace=in_action_grad_subspace, init_alpha=alphas)
 
-            if verbose:
+            if verbose and i%10 == 0:
                 print(f"{i}:new cosine sim: {new_cosine_similarity:.3f} best cosine sim:{cosine_similarity:.7f}"
                       f", std:{action_explore_std:.3e}, traj_len:{len(new_concated_seq)}")
 
@@ -95,7 +106,11 @@ class TrajCompressor:
                 action_explore_std *= 0.5
                 not_improved_counter = 0
 
-        return (prev_action_seq + action_seq), state_seq, closest_grad, cosine_similarity, alphas
+                if action_explore_std <1e-5:
+                    break
+
+        return (prev_action_seq + action_seq) if in_action_grad_subspace else action_seq,\
+            state_seq, closest_grad, cosine_similarity, alphas
 
 
     # NOT USED RIGHT NOW
@@ -139,15 +154,20 @@ class TrajCompressor:
 
 if __name__ == "__main__":
 
+    # todo: (done) populate compressor_video_ant_quad_random_weight
+    # todo: (done) populate compressor_video_ant_net_random_weight
+    # todo: (done) populate compressor_video_ant_net_noalpha
+    # todo: populate compressor_video_ant_quad_noalpha
+
     exploration_std = 0.1
     device = t.device('cpu')
 
-    history_dict = pickle.load(open('../data/quad_Ant-v4_3/run_dict', 'rb'))
+    history_dict = pickle.load(open('../data/net_Ant-v4_0/run_dict', 'rb'))
 
     compressor = TrajCompressor(history_dict, history_dict['env_name'])
 
     agent = PolicyGradientAgent(env=compressor.env, exploration_std=exploration_std, device=device , type_model=history_dict['type_model'])
-    agent.model.load_state_dict(history_dict['model_dict'][-1])
+    agent.model.load_state_dict(history_dict['model_dict'][0])
     agent.optimizer = optim.SGD(agent.model.parameters(), lr=0.001)
 
     # =======================================================
@@ -167,10 +187,11 @@ if __name__ == "__main__":
     agent_actions = list(trajs[0]['a'])
     # =======================================================
 
-
     # the difference in weights from the initial values to the last weight values
     target_w = flatten_params(list(history_dict['model_dict'][-1].values())) -\
                flatten_params(list(history_dict['model_dict'][0].values()))
+
+    # target_w = t.randn(target_w.size())
 
     print(f"size of target parameters is {target_w.size()}")
 
@@ -180,19 +201,27 @@ if __name__ == "__main__":
     action_seq = None
     alphas = None
 
-    for traj_length in range(50, 500, 10):
+    for traj_length in range(10, 500, 10):
 
         action_seq, state_seq, closest_grad, cosine_similarity, alphas =\
             compressor.find_compressed_grad_trajectory(agent, target_w=target_w,
                                                        traj_length=traj_length,
                                                        init_action_seq=action_seq,
                                                        verbose=True,
+                                                       in_action_grad_subspace=True,
                                                        init_alpha=alphas)
 
-        alphas = alphas.detach()
+        alphas = alphas.detach() if alphas is not None else None
 
+        save_path = '../data/compressor_video_ant_net/'
 
         get_video_from_env(compressor.single_env, action_seq,
-                           save_path='../data/compressor_videos/' + "length_" +
+                           save_path= save_path + "length_" +
                                      str(traj_length) + f"_cosSim_{cosine_similarity:.3f}" + ".mp4",
-                           seed=42, alphas=alphas.numpy())
+                           seed=42, alphas=alphas.numpy() if alphas is not None else None)
+
+        pickle.dump({'action_seq':action_seq,
+                     'state_seq': state_seq,
+                     'closest_grad': closest_grad,
+                     'cosine_sim': cosine_similarity,
+                     'alphas': alphas}, open(save_path + 'action_seqs/dict_'+str(traj_length) ,'wb'))
