@@ -2,8 +2,15 @@
 
 This project aims to answer the following question: can an RL agent learn everything it needs from a single highly optimised state-action trajectory, or do we fundamentally need a dataset of behaviors in order to learn the optimal policy?
 
-The punchline: it seems possible, at least in Mujoco, to manufacture a single trajectory which lets a policy-gradient agent learn everything it needs
+The punchline: it seems possible, at least in Mujoco, to manufacture a single trajectory which lets a policy-gradient agent learn interesting behavior. And moreover this optimal trajectory does not at all ressemble expert behavior on the task.
 
+## Video of Optimised "Informative Trajectory"
+
+https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/ce80b4e9-a9ac-4bb6-98c8-2f1e749fb2bf
+
+## Final Behavior Trained Only On That Trajectory
+
+https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/f5897494-9508-4a7a-a184-0b16340801fe
 
 
 # Project Introduction
@@ -56,17 +63,7 @@ Visualization of algorithm 2. For a fixed state-action trajectory, we can find t
 # Videos
 
 
-
 https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/266d5615-136c-4c26-8ebb-fcbf5d44338e
-
-
-
-https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/ce80b4e9-a9ac-4bb6-98c8-2f1e749fb2bf
-
-
-
-
-https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/f5897494-9508-4a7a-a184-0b16340801fe
 
 
 
