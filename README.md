@@ -52,11 +52,19 @@ Visualization of algorithm 2. For a fixed state-action trajectory, we can find t
 # Videos
 
 
-https://github.com/RazCiuca/6163_project_grad_compression/blob/master/videos/quad_ant_final_trained_behavior.mp4
 
-https://github.com/RazCiuca/6163_project_grad_compression/blob/master/videos/length_490_cosSim_0.866_ant_net_best_compressed_traj.mp4
+https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/266d5615-136c-4c26-8ebb-fcbf5d44338e
 
-https://github.com/RazCiuca/6163_project_grad_compression/blob/master/videos/beta_0.45_rew_210.3905_ant_net_best_reconstructed_policy.mp4
+
+
+https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/ce80b4e9-a9ac-4bb6-98c8-2f1e749fb2bf
+
+
+
+
+https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/f5897494-9508-4a7a-a184-0b16340801fe
+
+
 
 
 
