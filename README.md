@@ -5,11 +5,11 @@ This project aims to answer the following question: can an RL agent learn everyt
 The punchline: it seems possible, at least in Mujoco, to manufacture a single trajectory which lets a policy-gradient agent learn interesting behavior. And moreover this optimal trajectory does not at all ressemble expert behavior on the task.
 
 ## Video of Optimised "Informative Trajectory"
-
+Here is a video of a state-action trajectory specifically optimised to be maximally "informative" in a sense to be described later. Notice the total lack of anything that could ressemble expert behavior. 
 https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/ce80b4e9-a9ac-4bb6-98c8-2f1e749fb2bf
 
 ## Final Behavior Trained Only On That Trajectory
-
+And this is the policy we get by training only on the above trajectory with policy gradients. Not expert behavior by any means, but we can clearly see attempts at walking behavior, learned from a trajectory which did not contain such behavior.
 https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/f5897494-9508-4a7a-a184-0b16340801fe
 
 
@@ -59,11 +59,6 @@ Visualization of algorithm 2. For a fixed state-action trajectory, we can find t
 ![algo_1](images/algo_1.png)
 
 ![algo_2](images/algo_2.png)
-
-# Videos
-
-
-https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/266d5615-136c-4c26-8ebb-fcbf5d44338e
 
 
 
