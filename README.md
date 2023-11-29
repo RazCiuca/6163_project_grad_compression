@@ -34,57 +34,16 @@ We can now view the sequence of actions $A$ as our optimization target and attem
 There are three extensions of this basic idea that we can explore. First, we are not limited to  compressing the policy gradient: we can in principle try to find action trajectories which lead to gradients close to an arbitrary direction in space, hence we can try to "compress" a completely random direction in parameter space, or directly compress the full parameter change from the beginning of training to the end of training, this latter extension is what we do in this project. Second, finding trajectories which directly minimize the distance $||g_i - \nabla_\theta v_\pi(s_0)||^2$ might be too hard, since the compressed gradient not only has to match the direction of the full target vector, but also its magnitude. Maximizing the cosine similarity instead of the squared L2 norm fixes this problem. We discuss the third extension in the next section.
 
 ![gradient compression](images/gradient_compression.svg)
-\caption{Visualization of gradient compression, going from state-space trajectories to weight space gradients. The blue arrow is the full policy gradient computed from a large sample of trajectories. The red trajectory is our optimized action sequence resulting in a gradient as close as possible to the blue arrow.}
-\end{figure}
+Visualization of gradient compression, going from state-space trajectories to weight space gradients. The blue arrow is the full policy gradient computed from a large sample of trajectories. The red trajectory is our optimized action sequence resulting in a gradient as close as possible to the blue arrow.
 
 # Finding Maximal Cosine Similarity Vectors in the Span of Single State-Action Gradients
 
 Instead of simply summing over the log likelihoods $\sum_{t} \nabla_\theta \log \pi_\theta (a_{t,i}|s_{t,i}) $ of each action in the trajectory that we are considering in order to compute the gradient that we wish to be close to our target compression vector, we can also learn a weighing $\sum_{t} \alpha_t \nabla_\theta \log \pi_\theta (a_{t,i}|s_{t,i}) $ for each action. Roughly, instead of finding a trajectory that should be uniformly encouraged in order to lead to the vector we want to reconstruct, we allow for differences between the actions considered. More precisely, if $g_t \equiv \nabla_\theta \log \pi_\theta (a_{t}|s_{t})$ is the gradient for the state-action pair $(s_t, a_t)$, we wish to find coefficients $\alpha_t$ such that $D_{\text{cosine}}(w_{\text{target}}, \sum_t \alpha_t \nabla_\theta \log \pi_\theta (a_{t}|s_{t}))$ is maximized. Finding these parameters $\alpha_t$ is a nontrivial optimisation problem and we use the BFGS optimization algorithm to solve it. See figure 2 and algorithm 2 for a visualisation and precise description.
 
-\begin{figure}[ht]
-\includesvg[inkscapelatex=false,width=\columnwidth]{optimising_alphas.svg}
-\centering
-\caption{Visualization of algorithm 2. For a fixed state-action trajectory, we can find the optimal weighing $\alpha_i$ for each action in the sequence in order to maximize the similarity with a target vector, shown here in blue. The red, green and blue arrows $g_i$ correspond to individual transition gradients which are then weighed over to produce the black arrow. Note that in two dimensions any two independent vectors would be enough to fully reproduce any target vector, but this situation is very different in high dimensional spaces.}
-\end{figure}
+![gradient compression 2](images/optimising_alphas_2.svg)
 
+Visualization of algorithm 2. For a fixed state-action trajectory, we can find the optimal weighing $\alpha_i$ for each action in the sequence in order to maximize the similarity with a target vector, shown here in blue. The red, green and blue arrows $g_i$ correspond to individual transition gradients which are then weighed over to produce the black arrow. Note that in two dimensions any two independent vectors would be enough to fully reproduce any target vector, but this situation is very different in high dimensional spaces
 
-\begin{algorithm}[ht]
-\caption{\label{grad_compression} Finding compressed-gradient action sequences}
-\begin{algorithmic}[1]
-	\STATE init network parameters $\theta$ parametrising policy $\pi_\theta$, and known gradient $\nabla_\theta v_\pi(s_0)$
-        \STATE init $\mu=0$ and $\sigma$ to large value
-      \FOR{$l \in 0, \ldots, L$}
-            \STATE Sample population of action trajectories $A_i =\{a_{i,0}, a_{i,1}, ..., a_{i,t} \}$ with $a_{i,k}\sim N(\mu, \sigma^2)$
-            \STATE run $A_i$ in environment to collect trajectories $\tau_i$
-            \STATE compute the gradients $g_i = G_i \sum_t \nabla_\theta \log \pi_\theta(a_{i,t}| s_{i,t})$
-            \STATE compute $y_i = ||g_i - \nabla_\theta v_\pi(s_0)||^2$
-            \STATE find the indices of the top $k$ $y_i$ values
-            \STATE update $\mu$ and $\sigma$ with the mean and variance of the top $k$ sequences
-	  \ENDFOR
-    \STATE return $g_i$ with minimal $||g_i - \nabla_\theta v_\pi(s_0)||^2$
-    \end{algorithmic}
-    
-\end{algorithm}
+![algo_1](images/algo_1.png)
 
-
-\begin{algorithm}[ht]
-\caption{\label{alpha_compression} Compressed-gradient trajectory for arbitrary weight direction}
-\begin{algorithmic}[1]
-	\STATE init model parameters $\theta$ parametrising policy $\pi_\theta$, and target weights to reconstruct $w_{\text{target}}$
-        \STATE init $\mu=0$ and $\sigma$ to large value
-      \FOR{$l \in 0, \ldots, L$}
-            \STATE Sample population of action trajectories $A_i =\{a_{i,0}, a_{i,1}, ..., a_{i,t} \}$ with $a_{i,k}\sim N(\mu, \sigma^2)$
-            \STATE run $A_i$ in environment to collect trajectories $\tau_i$
-            \STATE compute the gradients $g_{i,t} = \nabla_\theta \log \pi_\theta(a_{i,t}| s_{i,t})$
-             \FOR{$i \in 0, \ldots, n$}
-                \STATE init parameters $\alpha_t = 1$
-                \STATE Maximise $D_{\text{cosine}}(w_{\text{target}}, \sum_t \alpha_t \nabla_\theta \log \pi_\theta (a_{i,t}|s_{i,t}))$ with respect to $\alpha_t$ using L-BFGS.
-             \ENDFOR
-            \STATE compute $d_{i,\text{best}}$ the best cosine similarity found in the previous step
-            \STATE find the indices of the top $k$ $D_{i,\text{best}}$ values
-            \STATE update $\mu$ and $\sigma$ with the mean and variance of the top $k$ sequences
-	  \ENDFOR
-    \STATE return $g_i$ and $A_i$ with maximal cosine similarity with $w_{\text{target}}$
-    \end{algorithmic}
-    
-\end{algorithm}
+![algo_2](images/algo_2.png)
