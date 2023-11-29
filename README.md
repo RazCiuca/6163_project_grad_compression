@@ -47,3 +47,10 @@ Visualization of algorithm 2. For a fixed state-action trajectory, we can find t
 ![algo_1](images/algo_1.png)
 
 ![algo_2](images/algo_2.png)
+
+# Videos
+
+
+
+
+
