@@ -6,10 +6,12 @@ The punchline: it seems possible, at least in Mujoco, to manufacture a single tr
 
 ## Video of Optimised "Informative Trajectory"
 Here is a video of a state-action trajectory specifically optimised to be maximally "informative" in a sense to be described later. Notice the total lack of anything that could ressemble expert behavior. 
+
 https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/ce80b4e9-a9ac-4bb6-98c8-2f1e749fb2bf
 
 ## Final Behavior Trained Only On That Trajectory
 And this is the policy we get by training only on the above trajectory with policy gradients. Not expert behavior by any means, but we can clearly see attempts at walking behavior, learned from a trajectory which did not contain such behavior.
+
 https://github.com/RazCiuca/6163_project_grad_compression/assets/112354159/f5897494-9508-4a7a-a184-0b16340801fe
 
 
