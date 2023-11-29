@@ -14,18 +14,15 @@ On a set of mujoco environments using a quadratic agent and a small neural netwo
 The main theoretical background of this work is the policy gradient theorem, which states that the gradient of the sum of future reward $v_\pi(s_0)$ with respect to the free parameters of our policy $\pi_\theta(a|s)$ is given by the following expression, first expressed as an expectation value, and then expressed as a finite sample approximation.
 
 $$ \nabla_\theta v_{\pi_\theta}(s_0) = E_{\tau \sim \pi_\theta}\bigg[G \sum_t \nabla_\theta \log \pi_\theta (a_t|s_t)\bigg]$$
-    G \equiv \sum_t r_t\\
-    \nabla_\theta v_{\pi_\theta}(s_0) \approx \frac{1}{N} \sum_i \bigg( G_i \sum_{t} \nabla_\theta \log \pi_\theta (a_{t,i}|s_{t,i}) \bigg)
-$$
+$$G \equiv \sum_t r_t$$
+$$\nabla_\theta v_{\pi_\theta}(s_0) \approx \frac{1}{N} \sum_i \bigg( G_i \sum_{t} \nabla_\theta \log \pi_\theta (a_{t,i}|s_{t,i}) \bigg)$$
 
 This result assumes that we are sampling state trajectories according to the current version of the policy $\pi_\theta$, if we are sampling according to a different policy, we need to use importance sampling, which allows us to compute expectations of a quantity $x$ with distribution $p(x)$ from samples from $q \neq p$: $E_{x\sim p}[x] = E_{x \sim q}\big[\frac{p(x)}{q(x)} x\big]$. Written for the policy gradient theorem, this becomes:
 
-\begin{align}
-    \nabla_\theta v_{\pi_\theta}(s_0) = E_{\tau \sim q}\bigg[\frac{p(\tau)}{q(\tau)} G \sum_t \nabla_\theta \log \pi_\theta (a_t|s_t)\bigg]\\
-    \nabla_\theta v_{\pi_\theta}(s_0) = E_{\tau \sim \pi'}\bigg[\frac{\prod_t \pi_\theta(a_t|s_t)}{\prod_t \pi'(a_t|s_t)} G \sum_t \nabla_\theta \log \pi_\theta (a_t|s_t)\bigg]\\
-\end{align}
+$$\nabla_\theta v_{\pi_\theta}(s_0) = E_{\tau \sim q}\bigg[\frac{p(\tau)}{q(\tau)} G \sum_t \nabla_\theta \log \pi_\theta (a_t|s_t)\bigg]$$
+$$\nabla_\theta v_{\pi_\theta}(s_0) = E_{\tau \sim \pi'}\bigg[\frac{\prod_t \pi_\theta(a_t|s_t)}{\prod_t \pi'(a_t|s_t)} G \sum_t \nabla_\theta \log \pi_\theta (a_t|s_t)\bigg]$$
 
-The last bit of theory we need is the Cross-Entropy Method for optimizing a function $f(x)$ for which we do not have access to explicit derivatives $\nabla f(x)$. For us $x$ will be a candidate sequence of actions $a_1, a_2, ..., a_t$. CEM begins by generating an initial population of solutions $x_i \sim N(0, \sigma_0^2)$ with a $\sigma$ large enough that we are confident the optimal solution will be covered with appreciable probability. We evaluate each point $x_t$ to obtain $y_i = f(x_i)$. We then keep the top $r$ points, fit a new gaussian distribution to these points, and sample again to produce the next iteration of points. We note that since the variance can only decrease with successive iterations, it's important to set the initial variance large enough. A easy improvement to this basic method involves fitting a linear function to $\{x_i, y_i\}$, which gives us an estimate of the gradient, and then updating the mean of our gaussian distribution at each iteration in the direction of this computed gradient. 
+The last bit of theory we need is the Cross-Entropy Method for optimizing a function $f(x)$ for which we do not have access to explicit derivatives $\nabla f(x)$. For us $x$ will be a candidate sequence of actions $ a_1, a_2, ..., a_t $. CEM begins by generating an initial population of solutions $x_i \sim N(0, \sigma_0^2)$ with a $\sigma$ large enough that we are confident the optimal solution will be covered with appreciable probability. We evaluate each point $x_t$ to obtain $y_i = f(x_i)$. We then keep the top $r$ points, fit a new gaussian distribution to these points, and sample again to produce the next iteration of points. We note that since the variance can only decrease with successive iterations, it's important to set the initial variance large enough. A easy improvement to this basic method involves fitting a linear function to $\{x_i, y_i\}$, which gives us an estimate of the gradient, and then updating the mean of our gaussian distribution at each iteration in the direction of this computed gradient. 
 
 
 # Finding Gradient-Compressed Trajectories
