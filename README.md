@@ -5,7 +5,7 @@ IFT6163 Winter 2023 Final Project
 # Project Introduction
 
 Loosely inspired by the research into adversarial examples for image recognition models, we introduce the idea of "gradient compression" for policy gradient models, which consists in finding single state-action sequences which lead to gradients which closely match the full parameter change that occurs over the entire training history of a policy gradient model. Finding such action sequence that produces a gradient with high cosine similarity to the full weight change would let us fully train a model by computing the gradient of a single trajectory, and doing line search in that direction. The feasibility of this approach has interesting implications for the internal structure of policy gradient methods. If gradients turn out to be very compressible, it suggests the existence of a sampling method which might learn to generate these "gradient-compressed trajectories" from scratch, thereby greatly increasing the sample efficiency of policy gradient methods.
-\\\\
+
 On a set of mujoco environments using a quadratic agent and a small neural network agent, we explore just how much the policy gradient and the entire weight change can be compressed into single sequences of actions. The effect of model architecture on this compressibility, how much random weight directions can be compressed in this way, the relationship between the maximum achievable cosine similarity and the length of trajectory we optimise, and finally we "decompress" the compressed gradients we found to get back an approximation of the optimal policy.
 
 
@@ -28,12 +28,13 @@ The last bit of theory we need is the Cross-Entropy Method for optimizing a func
 # Finding Gradient-Compressed Trajectories
 
 In this section, we will define what we mean by "gradient-compressed trajectories" and justify why such a concept is useful and interesting. Given a parametrised policy $\pi_\theta$ and a set of trajectories $\tau_i \sim \pi_\theta$, we can compute the gradient $g_i$ for each of these trajectories and therefore approximate the true policy gradient by $\frac{1}{n} \sum_i g_i$ only in the limit $n\rightarrow \infty$. We notice that the policy gradient theorem provides a procedure for turning numbers representing sequences of actions $A = \{a_0, ..., a_t\}$ into numbers representing gradients with respect to $\theta$. Call this procedure $g(A)$ and let $\nabla_\theta v_\theta(s_0)$ be the full policy gradient. 
-\\\\
+
 We can now view the sequence of actions $A$ as our optimization target and attempt to find a single sequence $A$ such that $||g(A) - \nabla_\theta v_\theta(s_0)||^2$ is minimized. The full policy gradient requires a great deal of environment interaction to compute and, by finding a single action sequence which allows us to compute a gradient as close as possible to the true one, we have effectively "compressed" all the useable information of a large sample of trajectories into a single one. This trajectory "punches above its weight", so to speak, in terms of how useful it is for learning the optimal policy. Furthermore, we do not need to limit ourselves to optimizing a single trajectory: we can view a set of trajectories as our optimization variable instead to better approximate the full gradient.
-\\\\
+
 There are three extensions of this basic idea that we can explore. First, we are not limited to  compressing the policy gradient: we can in principle try to find action trajectories which lead to gradients close to an arbitrary direction in space, hence we can try to "compress" a completely random direction in parameter space, or directly compress the full parameter change from the beginning of training to the end of training, this latter extension is what we do in this project. Second, finding trajectories which directly minimize the distance $||g_i - \nabla_\theta v_\pi(s_0)||^2$ might be too hard, since the compressed gradient not only has to match the direction of the full target vector, but also its magnitude. Maximizing the cosine similarity instead of the squared L2 norm fixes this problem. We discuss the third extension in the next section.
 
 ![gradient compression](images/gradient_compression.svg)
+
 Visualization of gradient compression, going from state-space trajectories to weight space gradients. The blue arrow is the full policy gradient computed from a large sample of trajectories. The red trajectory is our optimized action sequence resulting in a gradient as close as possible to the blue arrow.
 
 # Finding Maximal Cosine Similarity Vectors in the Span of Single State-Action Gradients
@@ -49,6 +50,13 @@ Visualization of algorithm 2. For a fixed state-action trajectory, we can find t
 ![algo_2](images/algo_2.png)
 
 # Videos
+
+![final trained behavior(video/quad_ant_final_trained_behavior.mp4)
+
+![optimised trajectory(video/length_490_cosSim_0.866_ant_net_best_compressed_traj.mp4)
+
+![reconstructed trajectory(video/beta_0.45_rew_210.3905_ant_net_best_reconstructed_policy.mp4)
+
 
 
 
