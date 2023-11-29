@@ -13,11 +13,10 @@ On a set of mujoco environments using a quadratic agent and a small neural netwo
 
 The main theoretical background of this work is the policy gradient theorem, which states that the gradient of the sum of future reward $v_\pi(s_0)$ with respect to the free parameters of our policy $\pi_\theta(a|s)$ is given by the following expression, first expressed as an expectation value, and then expressed as a finite sample approximation.
 
-\begin{align}
-    \nabla_\theta v_{\pi_\theta}(s_0) = E_{\tau \sim \pi_\theta}\bigg[G \sum_t \nabla_\theta \log \pi_\theta (a_t|s_t)\bigg]\\
+$$ \nabla_\theta v_{\pi_\theta}(s_0) = E_{\tau \sim \pi_\theta}\bigg[G \sum_t \nabla_\theta \log \pi_\theta (a_t|s_t)\bigg]$$
     G \equiv \sum_t r_t\\
     \nabla_\theta v_{\pi_\theta}(s_0) \approx \frac{1}{N} \sum_i \bigg( G_i \sum_{t} \nabla_\theta \log \pi_\theta (a_{t,i}|s_{t,i}) \bigg)
-\end{align}
+$$
 
 This result assumes that we are sampling state trajectories according to the current version of the policy $\pi_\theta$, if we are sampling according to a different policy, we need to use importance sampling, which allows us to compute expectations of a quantity $x$ with distribution $p(x)$ from samples from $q \neq p$: $E_{x\sim p}[x] = E_{x \sim q}\big[\frac{p(x)}{q(x)} x\big]$. Written for the policy gradient theorem, this becomes:
 
