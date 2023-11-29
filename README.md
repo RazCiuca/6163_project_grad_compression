@@ -1,5 +1,9 @@
-# Finding RL Trajectories Which Compress the Gradient
-IFT6163 Winter 2023 Final Project
+# Finding RL Trajectories With Very Informative Gradients
+
+This project aims to answer the following question: can an RL agent learn everything it needs from a single highly optimised state-action trajectory, or do we fundamentally need a dataset of behaviors in order to learn the optimal policy?
+
+The punchline: it seems possible, at least in Mujoco, to manufacture a single trajectory which lets a policy-gradient agent learn everything it needs
+
 
 
 # Project Introduction
